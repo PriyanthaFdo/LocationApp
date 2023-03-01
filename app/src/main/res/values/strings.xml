@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">LocationApp</string>
     <string name="location">Latitude: %1$f, Longitude: %2$f</string>
+    <string name="multiLine">%1$s \n %2$s</string>
     <string name="errorRetrievingLocation">Error! cannot get Location</string>
     <string name="get_location">Get Location</string>
 </resources>
