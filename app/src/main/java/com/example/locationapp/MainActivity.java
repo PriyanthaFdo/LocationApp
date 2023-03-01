@@ -7,30 +7,32 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.IntentSender;
 import android.content.pm.PackageManager;
-import android.location.Location;
-import android.location.LocationRequest;
-import android.os.Build;
+import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.Handler;
-import android.util.Log;
+import android.os.Looper;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.CancellationToken;
-import com.google.android.gms.tasks.CancellationTokenSource;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.tasks.Task;
 
 public class MainActivity extends AppCompatActivity {
-    FusedLocationProviderClient fusedLocationProviderClient;
-    CancellationTokenSource cancellationTokenSource;
-    CancellationToken cancellationToken;
-
-    boolean isRunning;
-
+    private LocationManager locationManager;
+    private LocationRequest locationRequest;
     Button btn_getLocation;
-    TextView txt_locationResult;
+    private TextView txt_locationResult;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,26 +42,61 @@ public class MainActivity extends AppCompatActivity {
         btn_getLocation = findViewById(R.id.btn_getLocation);
         txt_locationResult = findViewById(R.id.txt_locationResult);
 
-        isRunning = false;
+        locationRequest = LocationRequest.create();
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setInterval(5000);
+        locationRequest.setFastestInterval(2000);
 
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        btn_getLocation.setOnClickListener(v -> getLocation());
+    }
 
-        btn_getLocation.setOnClickListener(v -> {
-            if(!isRunning) {
-                cancellationTokenSource = new CancellationTokenSource();
-                cancellationToken = cancellationTokenSource.getToken();
-                isRunning = true;
-                getLocation();
+    private void getLocation() {
+        if (isLocationPermissionAllowed()) {
+            if (isGpsEnabled()) {
+                getCurrentLocation();
+            } else {
+                turnOnGps();
+            }
+        } else {
+            requestLocationPermission();
+        }
+    }
+
+    private void turnOnGps() {
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .addLocationRequest(locationRequest);
+        builder.setAlwaysShow(true);
+
+        Task<LocationSettingsResponse> result = LocationServices.getSettingsClient(getApplicationContext())
+                .checkLocationSettings(builder.build());
+
+        result.addOnCompleteListener(task -> {
+            try {
+                LocationSettingsResponse response = task.getResult(ApiException.class);
+                Toast.makeText(MainActivity.this, "GPS is already turned on", Toast.LENGTH_SHORT).show();
+            } catch (ApiException e) {
+                switch (e.getStatusCode()) {
+                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                        try {
+                            ResolvableApiException resolvableApiException = (ResolvableApiException) e;
+                            resolvableApiException.startResolutionForResult(MainActivity.this, 2);
+                        } catch (IntentSender.SendIntentException ex) {
+                            ex.printStackTrace();
+                        }
+                        break;
+                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                        //Device does not have location
+                        break;
+                }
             }
         });
     }
 
-    private void getLocation(){
-        if(isLocationPermissionAllowed()){
-            getCurrentLocation();
-        } else {
-            requestLocationPermission();
+    private boolean isGpsEnabled() {
+        if (locationManager == null) {
+            locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         }
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
     }
 
     private boolean isLocationPermissionAllowed() {
@@ -70,41 +107,31 @@ public class MainActivity extends AppCompatActivity {
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 44);
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        getLocation();
-    }
-
     @SuppressLint("MissingPermission")
     private void getCurrentLocation() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Log.d("getCurrentLocation", "new Sdk");
-            fusedLocationProviderClient.getCurrentLocation(LocationRequest.QUALITY_BALANCED_POWER_ACCURACY, cancellationToken)
-                    .addOnSuccessListener(this::displayLocation);
-        } else {
-            Log.d("getCurrentLocation", "old Sdk");
-            fusedLocationProviderClient.getLastLocation()
-                    .addOnSuccessListener(this::displayLocation);
-        }
+
+        LocationServices.getFusedLocationProviderClient(MainActivity.this)
+                .requestLocationUpdates(locationRequest, new LocationCallback() {
+                    @Override
+                    public void onLocationResult(@NonNull LocationResult locationResult) {
+                        super.onLocationResult(locationResult);
+                        LocationServices.getFusedLocationProviderClient(MainActivity.this)
+                                .removeLocationUpdates(this);
+
+                        if(locationResult.getLocations().size() > 0){
+                            int index = locationResult.getLocations().size() - 1;
+                            double latitude = locationResult.getLocations().get(index).getLatitude();
+                            double longitude = locationResult.getLocations().get(index).getLongitude();
+                            displayLocation(latitude, longitude);
+                        }
+                    }
+                }, Looper.getMainLooper());
     }
 
-    private void displayLocation(Location location) {
-        cancellationTokenSource = new CancellationTokenSource();
-        if(location != null){
-            double longitude = location.getLongitude();
-            double latitude = location.getLatitude();
-
-            String currentText = txt_locationResult.getText().toString();
-            String newText = getResources().getString(R.string.location, latitude, longitude);
-            txt_locationResult.setText(getResources().getString(R.string.multiLine, newText, currentText));
-            cancellationTokenSource.cancel();
-
-        } else {
-            txt_locationResult.setText(R.string.errorRetrievingLocation);
-            new Handler().postDelayed(() -> txt_locationResult.setText(""), 3000);
-        }
-        isRunning = false;
+    private void displayLocation(double latitude, double longitude) {
+        String currentText = txt_locationResult.getText().toString();
+        String newText = getResources().getString(R.string.location, latitude, longitude);
+        txt_locationResult.setText(getResources().getString(R.string.multiLine, newText, currentText));
     }
 }
 
