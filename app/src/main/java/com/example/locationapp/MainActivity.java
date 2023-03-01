@@ -26,9 +26,15 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.Task;
+/*
+* Created by Priyantha by viewing Youtube video
+* https://www.youtube.com/watch?v=mbQd6frpC3g
+* */
 
 public class MainActivity extends AppCompatActivity {
+    private static final int LOCATION_UPDATE_INTERVAL = 3000; //milliseconds
     private LocationManager locationManager;
     private LocationRequest locationRequest;
     Button btn_getLocation;
@@ -42,10 +48,10 @@ public class MainActivity extends AppCompatActivity {
         btn_getLocation = findViewById(R.id.btn_getLocation);
         txt_locationResult = findViewById(R.id.txt_locationResult);
 
-        locationRequest = LocationRequest.create();
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(5000);
-        locationRequest.setFastestInterval(2000);
+        locationRequest = new LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                LOCATION_UPDATE_INTERVAL
+        ).build();
 
         btn_getLocation.setOnClickListener(v -> getLocation());
     }
