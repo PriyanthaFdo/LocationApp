@@ -13,12 +13,14 @@ import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Looper;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
@@ -28,32 +30,60 @@ import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.Task;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 /*
 * Created by Priyantha by viewing Youtube video
 * https://www.youtube.com/watch?v=mbQd6frpC3g
 * */
 
 public class MainActivity extends AppCompatActivity {
-    private static final int LOCATION_UPDATE_INTERVAL = 3000; //milliseconds
+    private static final int LOCATION_UPDATE_TIME_INTERVAL = 5000; //milliseconds
+    private static final int LOCATION_UPDATE_DISTANCE_INTERVAL = 100; //meters
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private LocationCallback locationCallback;
     private LocationManager locationManager;
     private LocationRequest locationRequest;
-    Button btn_getLocation;
-    private TextView txt_locationResult;
+
+    private boolean isRunning;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        btn_getLocation = findViewById(R.id.btn_getLocation);
-        txt_locationResult = findViewById(R.id.txt_locationResult);
+        isRunning = false;
+        Button btn_startStop = findViewById(R.id.btn_startStop);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        locationRequest = new LocationRequest.Builder(
-                Priority.PRIORITY_HIGH_ACCURACY,
-                LOCATION_UPDATE_INTERVAL
-        ).build();
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                super.onLocationResult(locationResult);
+//                Log.d("locationReceived", "onLocationResult called");
+                if(locationResult.getLocations().size() > 0){
+                    int index = locationResult.getLocations().size() - 1;
+                    double latitude = locationResult.getLocations().get(index).getLatitude();
+                    double longitude = locationResult.getLocations().get(index).getLongitude();
+                    long time =locationResult.getLocations().get(index).getTime();
+                    displayLocation(latitude, longitude, time);
+                }
+            }
+        };
 
-        btn_getLocation.setOnClickListener(v -> getLocation());
+        btn_startStop.setOnClickListener(v -> {
+            if(!isRunning){
+                getLocation();
+                btn_startStop.setText(R.string.stop_location_service);
+            } else {
+                fusedLocationClient.removeLocationUpdates(locationCallback);
+                btn_startStop.setText(R.string.start_location_service);
+            }
+            isRunning = !isRunning;
+        });
     }
 
     private void getLocation() {
@@ -121,29 +151,31 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("MissingPermission")
     private void getCurrentLocation() {
+        locationRequest = new LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                LOCATION_UPDATE_TIME_INTERVAL)
+                .setMinUpdateIntervalMillis(LOCATION_UPDATE_TIME_INTERVAL)
+                .setMinUpdateDistanceMeters(LOCATION_UPDATE_DISTANCE_INTERVAL).build();
 
-        LocationServices.getFusedLocationProviderClient(MainActivity.this)
-                .requestLocationUpdates(locationRequest, new LocationCallback() {
-                    @Override
-                    public void onLocationResult(@NonNull LocationResult locationResult) {
-                        super.onLocationResult(locationResult);
-                        LocationServices.getFusedLocationProviderClient(MainActivity.this)
-                                .removeLocationUpdates(this);
-
-                        if(locationResult.getLocations().size() > 0){
-                            int index = locationResult.getLocations().size() - 1;
-                            double latitude = locationResult.getLocations().get(index).getLatitude();
-                            double longitude = locationResult.getLocations().get(index).getLongitude();
-                            displayLocation(latitude, longitude);
-                        }
-                    }
-                }, Looper.getMainLooper());
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
     }
 
-    private void displayLocation(double latitude, double longitude) {
-        String currentText = txt_locationResult.getText().toString();
-        String newText = getResources().getString(R.string.location, latitude, longitude);
-        txt_locationResult.setText(getResources().getString(R.string.multiLine, newText, currentText));
+    private void displayLocation(double latitude, double longitude, long time) {
+        String result = latitude +", "+ longitude +", "+ time +"| ";
+        Toast.makeText(this, result, Toast.LENGTH_SHORT).show();
+        writeToFile(result);
+    }
+
+    private void writeToFile(String locationData){
+        File internalStorageDir = getFilesDir();
+        File file = new File(internalStorageDir, "coordinates.txt");
+        try{
+            FileWriter writer = new FileWriter(file, true);
+            writer.write(locationData);
+            writer.close();
+        }catch (IOException e){
+            Toast.makeText(this, "Error: "+ e, Toast.LENGTH_LONG).show();
+        }
     }
 }
 
