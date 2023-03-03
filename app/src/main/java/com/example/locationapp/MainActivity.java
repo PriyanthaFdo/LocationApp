@@ -13,9 +13,8 @@ import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Looper;
-import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.ApiException;
@@ -41,7 +40,7 @@ import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
     private static final int LOCATION_UPDATE_TIME_INTERVAL = 5000; //milliseconds
-    private static final int LOCATION_UPDATE_DISTANCE_INTERVAL = 100; //meters
+    private static final int LOCATION_UPDATE_DISTANCE_INTERVAL = 50; //meters
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
@@ -49,11 +48,14 @@ public class MainActivity extends AppCompatActivity {
     private LocationRequest locationRequest;
 
     private boolean isRunning;
+    private boolean isNewTrip;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         isRunning = false;
         Button btn_startStop = findViewById(R.id.btn_startStop);
@@ -76,10 +78,12 @@ public class MainActivity extends AppCompatActivity {
 
         btn_startStop.setOnClickListener(v -> {
             if(!isRunning){
+                isNewTrip = true;
                 getLocation();
                 btn_startStop.setText(R.string.stop_location_service);
             } else {
                 fusedLocationClient.removeLocationUpdates(locationCallback);
+                writeToFile("\n\n");
                 btn_startStop.setText(R.string.start_location_service);
             }
             isRunning = !isRunning;
@@ -161,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void displayLocation(double latitude, double longitude, long time) {
-        String result = latitude +", "+ longitude +", "+ time +"| ";
+        String result = latitude +","+ longitude +","+ time;
         Toast.makeText(this, result, Toast.LENGTH_SHORT).show();
         writeToFile(result);
     }
@@ -171,7 +175,11 @@ public class MainActivity extends AppCompatActivity {
         File file = new File(internalStorageDir, "coordinates.txt");
         try{
             FileWriter writer = new FileWriter(file, true);
+            if(!isNewTrip){
+                locationData = "|" + locationData;
+            }
             writer.write(locationData);
+            isNewTrip = false;
             writer.close();
         }catch (IOException e){
             Toast.makeText(this, "Error: "+ e, Toast.LENGTH_LONG).show();
