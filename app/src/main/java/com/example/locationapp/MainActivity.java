@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
@@ -41,11 +42,14 @@ import java.io.IOException;
 public class MainActivity extends AppCompatActivity {
     private static final int LOCATION_UPDATE_TIME_INTERVAL = 5000; //milliseconds
     private static final int LOCATION_UPDATE_DISTANCE_INTERVAL = 50; //meters
+    private static final boolean KEEP_SCREEN_ON = true;
 
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
     private LocationManager locationManager;
     private LocationRequest locationRequest;
+
+    private Button btn_startStop;
 
     private boolean isRunning;
     private boolean isNewTrip;
@@ -55,17 +59,18 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if(KEEP_SCREEN_ON) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
 
         isRunning = false;
-        Button btn_startStop = findViewById(R.id.btn_startStop);
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        btn_startStop = findViewById(R.id.btn_startStop);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(MainActivity.this);
 
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
                 super.onLocationResult(locationResult);
-//                Log.d("locationReceived", "onLocationResult called");
                 if(locationResult.getLocations().size() > 0){
                     int index = locationResult.getLocations().size() - 1;
                     double latitude = locationResult.getLocations().get(index).getLatitude();
@@ -77,17 +82,29 @@ public class MainActivity extends AppCompatActivity {
         };
 
         btn_startStop.setOnClickListener(v -> {
+            Intent i = new Intent(MainActivity.this, LocationService.class);
             if(!isRunning){
-                isNewTrip = true;
-                getLocation();
-                btn_startStop.setText(R.string.stop_location_service);
+                startService(i);
+                startLocationService();
             } else {
-                fusedLocationClient.removeLocationUpdates(locationCallback);
-                writeToFile("\n\n");
-                btn_startStop.setText(R.string.start_location_service);
+                stopService(i);
+                stopLocationService();
             }
             isRunning = !isRunning;
         });
+    }
+
+
+    public void startLocationService(){
+        isNewTrip = true;
+        getLocation();
+        btn_startStop.setText(R.string.stop_location_service);
+    }
+
+    public void stopLocationService(){
+        fusedLocationClient.removeLocationUpdates(locationCallback);
+        writeToFile("\n\n");
+        btn_startStop.setText(R.string.start_location_service);
     }
 
     private void getLocation() {
@@ -140,11 +157,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean isLocationPermissionAllowed() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
     private void requestLocationPermission() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 44);
+        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 44);
     }
 
     @Override
@@ -166,7 +183,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void displayLocation(double latitude, double longitude, long time) {
         String result = latitude +","+ longitude +","+ time;
-        Toast.makeText(this, result, Toast.LENGTH_SHORT).show();
+        Toast.makeText(MainActivity.this, result, Toast.LENGTH_SHORT).show();
         writeToFile(result);
     }
 
@@ -182,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
             isNewTrip = false;
             writer.close();
         }catch (IOException e){
-            Toast.makeText(this, "Error: "+ e, Toast.LENGTH_LONG).show();
+            Toast.makeText(MainActivity.this, "Error: "+ e, Toast.LENGTH_LONG).show();
         }
     }
 }
