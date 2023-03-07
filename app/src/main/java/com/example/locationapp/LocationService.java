@@ -1,12 +1,13 @@
 package com.example.locationapp;
 
+import static com.example.locationapp.Constants.*;
+
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
-import android.location.LocationManager;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Looper;
@@ -21,7 +22,6 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.Priority;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -35,13 +35,6 @@ public class LocationService extends Service {
     private LocationRequest locationRequest;
 
     private boolean isNewTrip;
-
-    private static final String CHANNEL_ID = "Foreground location service";
-    private static final String SERVICE_TITLE = "LocationApp Location Service";
-    private static final String SERVICE_NOTIFICATION_CONTENT = "Location Service is active";
-    private static final int NOTIFICATION_ID = 1;
-
-
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -121,7 +114,9 @@ public class LocationService extends Service {
 
     private void displayLocation(double latitude, double longitude, long time) {
         String result = latitude +","+ longitude +","+ time;
-        Toast.makeText(this, result, Toast.LENGTH_SHORT).show();
+        if(CREATE_TOAST_MSG) {
+            Toast.makeText(this, result, Toast.LENGTH_SHORT).show();
+        }
         writeToFile(result);
     }
 

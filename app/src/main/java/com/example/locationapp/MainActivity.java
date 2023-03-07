@@ -1,5 +1,8 @@
 package com.example.locationapp;
 
+
+import static com.example.locationapp.Constants.*;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
@@ -37,12 +40,6 @@ import java.util.List;
 * */
 
 public class MainActivity extends AppCompatActivity {
-    private static final int LOCATION_UPDATE_TIME_INTERVAL = 5000; //milliseconds
-    private static final int LOCATION_UPDATE_DISTANCE_INTERVAL = 50; //meters
-    private static final boolean KEEP_SCREEN_ON = true;
-
-    private boolean isRunning;
-
     private Intent intent;
     private LocationManager locationManager;
     private LocationRequest locationRequest;
@@ -58,7 +55,6 @@ public class MainActivity extends AppCompatActivity {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
 
-        isRunning = false;
         btn_startStop = findViewById(R.id.btn_startStop);
         intent = new Intent(MainActivity.this, LocationService.class);
 
@@ -77,7 +73,6 @@ public class MainActivity extends AppCompatActivity {
         btn_startStop.setOnClickListener(v -> {
             if(!isLocationServiceRunning()){
                 checkPermissions();
-//                startLocationService();
             } else {
                 stopLocationService();
             }
@@ -87,13 +82,11 @@ public class MainActivity extends AppCompatActivity {
 
     public void startLocationService(){
         btn_startStop.setText(R.string.stop_location_service);
-        isRunning = true;
         startService(intent);
     }
 
     public void stopLocationService(){
         stopService(intent);
-        isRunning = false;
         btn_startStop.setText(R.string.start_location_service);
     }
 
@@ -119,11 +112,9 @@ public class MainActivity extends AppCompatActivity {
                 intent.putExtra("locationRequest", locationRequest);
                 if(Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
                     startLocationService();
-//                    startService(intent);
                 } else {
                     if(isBackgroundLocationAllowed()) {
                         startLocationService();
-//                        startService(intent);
                     } else {
                         requestBackgroundLocationPermission();
                     }
