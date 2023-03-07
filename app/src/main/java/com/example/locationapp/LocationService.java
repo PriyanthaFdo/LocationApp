@@ -28,13 +28,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class LocationService extends Service {
-
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
-
     private LocationRequest locationRequest;
 
-    private boolean isNewTrip;
+    private boolean placePipeCharacter;
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -90,8 +89,8 @@ public class LocationService extends Service {
         Notification notification = createNotification();
         startForeground(NOTIFICATION_ID, notification);
 
-        isNewTrip = true;
-        getCurrentLocation();
+        placePipeCharacter = false;
+        startGetLocationLoop();
 
         return START_STICKY;
     }
@@ -100,15 +99,13 @@ public class LocationService extends Service {
     public void onDestroy() {
         super.onDestroy();
         fusedLocationClient.removeLocationUpdates(locationCallback);
+        placePipeCharacter = false;
         writeToFile("\n\n");
         stopForeground(true);
     }
 
-
     @SuppressLint("MissingPermission")
-    private void getCurrentLocation() {
-
-
+    private void startGetLocationLoop() {
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
     }
 
@@ -125,11 +122,11 @@ public class LocationService extends Service {
         File file = new File(internalStorageDir, "coordinates.txt");
         try{
             FileWriter writer = new FileWriter(file, true);
-            if(!isNewTrip){
+            if(placePipeCharacter){
                 locationData = "|" + locationData;
             }
             writer.write(locationData);
-            isNewTrip = false;
+            placePipeCharacter = true;
             writer.close();
         }catch (IOException e){
             Toast.makeText(this, "Error: "+ e, Toast.LENGTH_LONG).show();

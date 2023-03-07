@@ -1,6 +1,5 @@
 package com.example.locationapp;
 
-
 import static com.example.locationapp.Constants.*;
 
 import androidx.annotation.NonNull;
@@ -34,15 +33,15 @@ import com.google.android.gms.tasks.Task;
 
 import java.util.List;
 
-/*
-* Created by Priyantha by viewing Youtube video
-* https://www.youtube.com/watch?v=mbQd6frpC3g
-* */
+/// Created by Priyantha Fernando. Last Updated 07-03-2023
 
 public class MainActivity extends AppCompatActivity {
     private Intent intent;
     private LocationManager locationManager;
     private LocationRequest locationRequest;
+
+    private RequestType requestType;
+    private CurrentLocation currentLocation;
 
     private Button btn_startStop;
 
@@ -55,9 +54,12 @@ public class MainActivity extends AppCompatActivity {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
 
-        btn_startStop = findViewById(R.id.btn_startStop);
-        intent = new Intent(MainActivity.this, LocationService.class);
+        currentLocation = new CurrentLocation();
 
+        Button btn_currentLocation = findViewById(R.id.btn_currentLocation);
+        btn_startStop = findViewById(R.id.btn_startStop);
+
+        intent = new Intent(MainActivity.this, LocationService.class);
         locationRequest = new LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 LOCATION_UPDATE_TIME_INTERVAL)
@@ -71,26 +73,33 @@ public class MainActivity extends AppCompatActivity {
         }
 
         btn_startStop.setOnClickListener(v -> {
+            requestType = RequestType.CONTINUOUS_LOCATION;
+
             if(!isLocationServiceRunning()){
                 checkPermissions();
             } else {
                 stopLocationService();
             }
         });
+
+        btn_currentLocation.setOnClickListener(v -> {
+            requestType = RequestType.CURRENT_LOCATION;
+            checkPermissions();
+        });
     }
 
 
-    public void startLocationService(){
+    private void startLocationService(){
         btn_startStop.setText(R.string.stop_location_service);
         startService(intent);
     }
 
-    public void stopLocationService(){
+    private void stopLocationService(){
         stopService(intent);
         btn_startStop.setText(R.string.start_location_service);
     }
 
-    public boolean isLocationServiceRunning() {
+    private boolean isLocationServiceRunning() {
         ActivityManager manager = (ActivityManager) this.getSystemService(Context.ACTIVITY_SERVICE);
         if (manager != null) {
             List<ActivityManager.RunningServiceInfo> runningServices = manager.getRunningServices(Integer.MAX_VALUE);
@@ -105,16 +114,17 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-
     private void checkPermissions() {
+        boolean isAllPermissionsGranted = false;
+
         if (isLocationAllowed()) {
             if (isGpsEnabled()) {
                 intent.putExtra("locationRequest", locationRequest);
                 if(Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                    startLocationService();
+                    isAllPermissionsGranted = true;
                 } else {
                     if(isBackgroundLocationAllowed()) {
-                        startLocationService();
+                        isAllPermissionsGranted = true;
                     } else {
                         requestBackgroundLocationPermission();
                     }
@@ -124,6 +134,13 @@ public class MainActivity extends AppCompatActivity {
             }
         } else {
             requestLocationPermission();
+        }
+
+        if(isAllPermissionsGranted){
+            if(requestType == RequestType.CONTINUOUS_LOCATION)
+                startLocationService();
+            else if(requestType == RequestType.CURRENT_LOCATION)
+                currentLocation.getCurrentLocation(this, locationRequest);
         }
     }
 
