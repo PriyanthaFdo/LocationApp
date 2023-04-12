@@ -11,12 +11,13 @@ import androidx.core.content.ContextCompat;
 import android.Manifest;
 import android.app.ActivityManager;
 import android.content.Context;
-import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
@@ -36,12 +37,11 @@ import java.util.List;
 /// Created by Priyantha Fernando. Last Updated 07-03-2023
 
 public class MainActivity extends AppCompatActivity {
-    private Intent intent;
     private LocationManager locationManager;
     private LocationRequest locationRequest;
 
-    private RequestType requestType;
     private CurrentLocation currentLocation;
+    private LocationService locationService;
 
     private Button btn_startStop;
 
@@ -50,16 +50,19 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Log.d("LocationApp", "MainActivity: onCreate started");
+
         if(KEEP_SCREEN_ON) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
 
         currentLocation = new CurrentLocation();
+        locationService = new LocationService();
 
         Button btn_currentLocation = findViewById(R.id.btn_currentLocation);
         btn_startStop = findViewById(R.id.btn_startStop);
 
-        intent = new Intent(MainActivity.this, LocationService.class);
+        // TODO: move to services files & do something to checkGPS
         locationRequest = new LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 LOCATION_UPDATE_TIME_INTERVAL)
@@ -72,34 +75,34 @@ public class MainActivity extends AppCompatActivity {
             btn_startStop.setText(R.string.start_location_service);
         }
 
-        btn_startStop.setOnClickListener(v -> {
-            requestType = RequestType.CONTINUOUS_LOCATION;
+        btn_startStop.setOnClickListener(startStopBtnOnClick);
+        btn_currentLocation.setOnClickListener(currentLocationBtnOnClick);
+    }
 
-            if(!isLocationServiceRunning()){
-                checkPermissions();
-            } else {
-                stopLocationService();
+    private final View.OnClickListener startStopBtnOnClick = v -> {
+        Log.d("LocationApp", "MainActivity: Location Service Btn Clicked");
+
+        if(!isLocationServiceRunning()){
+            if(checkPermissions()){
+                Log.d("LocationApp", "MainActivity: start location service");
+                btn_startStop.setText(R.string.stop_location_service);
+                locationService.start(this, locationRequest);
             }
-        });
+        } else {
+            Log.d("LocationApp", "MainActivity: stop location service");
+            locationService.stop(this);
+            btn_startStop.setText(R.string.start_location_service);
+        }
+    };
 
-        btn_currentLocation.setOnClickListener(v -> {
-            requestType = RequestType.CURRENT_LOCATION;
-            checkPermissions();
-        });
-    }
-
-
-    private void startLocationService(){
-        btn_startStop.setText(R.string.stop_location_service);
-        startService(intent);
-    }
-
-    private void stopLocationService(){
-        stopService(intent);
-        btn_startStop.setText(R.string.start_location_service);
-    }
+    private final View.OnClickListener currentLocationBtnOnClick = v -> {
+        Log.d("LocationApp", "MainActivity: Single Location Btn Clicked");
+        if(checkPermissions())
+            currentLocation.getCurrentLocation(this, locationRequest);
+    };
 
     private boolean isLocationServiceRunning() {
+        Log.d("LocationApp", "MainActivity: checking is service active");
         ActivityManager manager = (ActivityManager) this.getSystemService(Context.ACTIVITY_SERVICE);
         if (manager != null) {
             List<ActivityManager.RunningServiceInfo> runningServices = manager.getRunningServices(Integer.MAX_VALUE);
@@ -114,12 +117,13 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    private void checkPermissions() {
+    private boolean checkPermissions() {
         boolean isAllPermissionsGranted = false;
+
+        Log.d("LocationApp", "MainActivity: checking permissions");
 
         if (isLocationAllowed()) {
             if (isGpsEnabled()) {
-                intent.putExtra("locationRequest", locationRequest);
                 if(Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
                     isAllPermissionsGranted = true;
                 } else {
@@ -136,15 +140,11 @@ public class MainActivity extends AppCompatActivity {
             requestLocationPermission();
         }
 
-        if(isAllPermissionsGranted){
-            if(requestType == RequestType.CONTINUOUS_LOCATION)
-                startLocationService();
-            else if(requestType == RequestType.CURRENT_LOCATION)
-                currentLocation.getCurrentLocation(this, locationRequest);
-        }
+        return  isAllPermissionsGranted;
     }
 
     private boolean isGpsEnabled() {
+        Log.d("LocationApp", "MainActivity: is GPS enabled");
         if (locationManager == null) {
             locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         }
@@ -152,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void turnOnGps() {
+        Log.d("LocationApp", "MainActivity: Request GPS turn on");
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
                 .addLocationRequest(locationRequest);
         builder.setAlwaysShow(true);
@@ -182,26 +183,31 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean isLocationAllowed() {
+        Log.d("LocationApp", "MainActivity: is location permission allowed");
         return ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
     private void requestLocationPermission() {
+        Log.d("LocationApp", "MainActivity: request location permission");
         ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 44);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
     private boolean isBackgroundLocationAllowed(){
+        Log.d("LocationApp", "MainActivity: is background location permission allowed");
         return ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
     private void requestBackgroundLocationPermission() {
+        Log.d("LocationApp", "MainActivity: requesting background location permission");
         ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, 55);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        Log.d("LocationApp", "MainActivity: permission request result received");
         checkPermissions();
     }
 }

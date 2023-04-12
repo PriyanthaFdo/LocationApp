@@ -6,7 +6,7 @@ This is an app developed by myself as an R&D task assigned to me by Kingslake du
 The app uses Google location api.
 There are 2 options
   ### Start Location Service
-  * Locaion of the device is continuosly retrieved and stored in a text file in system files in the format "<latitude>,<longitude>,<unixTime>". Each entry is seperated by a "|" and each restart of the service is seperated by a couple of "\n".
+  * Location of the device is continuously retrieved and stored in a text file in system files in the format "<latitude>,<longitude>,<unixTime>". Each entry is separated by a "|" and each restart of the service is separated by a couple of "\n".
   * The service runs as a foreground service once started and will continue running even if application is closed.
   * A notification is displayed during it's active period.
   

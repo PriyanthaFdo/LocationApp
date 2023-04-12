@@ -18,7 +18,6 @@ public class CurrentLocation {
     LocationCallback locationCallback;
     private LocationRequest locationRequest;
 
-    @SuppressLint("MissingPermission")
     public void getCurrentLocation(Context context, LocationRequest locationRequest) {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(context);
         locationCallback = new LocationCallback() {

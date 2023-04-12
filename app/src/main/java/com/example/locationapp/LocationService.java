@@ -7,10 +7,12 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Looper;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -62,6 +64,19 @@ public class LocationService extends Service {
         };
     }
 
+    public void start(Context context, LocationRequest locationRequest){
+        Log.d("LocationApp", "LocationService: start called");
+        Intent intent = new Intent(context, LocationService.class);
+        intent.putExtra("locationRequest", locationRequest);
+        context.startService(intent);
+    }
+
+    public void stop(Context context){
+        Log.d("LocationApp", "LocationService: stop called");
+        Intent intent = new Intent(context, LocationService.class);
+        context.stopService(intent);
+    }
+
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
@@ -85,6 +100,7 @@ public class LocationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d("LocationApp", "LocationService: starting location service");
         locationRequest = intent.getParcelableExtra("locationRequest");
         Notification notification = createNotification();
         startForeground(NOTIFICATION_ID, notification);
@@ -97,6 +113,7 @@ public class LocationService extends Service {
 
     @Override
     public void onDestroy() {
+        Log.d("LocationApp", "LocationService: stopping location service");
         super.onDestroy();
         fusedLocationClient.removeLocationUpdates(locationCallback);
         placePipeCharacter = false;
@@ -106,6 +123,7 @@ public class LocationService extends Service {
 
     @SuppressLint("MissingPermission")
     private void startGetLocationLoop() {
+        Log.d("LocationApp", "LocationService: Location loop started");
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
     }
 
