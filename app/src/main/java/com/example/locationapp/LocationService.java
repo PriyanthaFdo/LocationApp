@@ -3,6 +3,8 @@ package com.example.locationapp;
 import static com.example.locationapp.Constants.*;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -21,19 +23,17 @@ import androidx.core.app.NotificationCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 
 public class LocationService extends Service {
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
-    private LocationRequest locationRequest;
-
     private boolean placePipeCharacter;
 
     @Nullable
@@ -64,17 +64,21 @@ public class LocationService extends Service {
         };
     }
 
-    public void start(Context context, LocationRequest locationRequest){
-        Log.d("LocationApp", "LocationService: start called");
-        Intent intent = new Intent(context, LocationService.class);
-        intent.putExtra("locationRequest", locationRequest);
-        context.startService(intent);
+    public boolean start(Activity activity, Context context){
+        if(Permissions.checkPermissions(activity, context)) {
+            Log.d("LocationApp", "LocationService: start called");
+            Intent intent = new Intent(context, LocationService.class);
+            context.startService(intent);
+            return  true;
+        }else{
+            return false;
+        }
     }
 
-    public void stop(Context context){
+    public boolean stop(Context context){
         Log.d("LocationApp", "LocationService: stop called");
         Intent intent = new Intent(context, LocationService.class);
-        context.stopService(intent);
+        return context.stopService(intent);
     }
 
     private void createNotificationChannel() {
@@ -101,7 +105,6 @@ public class LocationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("LocationApp", "LocationService: starting location service");
-        locationRequest = intent.getParcelableExtra("locationRequest");
         Notification notification = createNotification();
         startForeground(NOTIFICATION_ID, notification);
 
@@ -125,6 +128,22 @@ public class LocationService extends Service {
     private void startGetLocationLoop() {
         Log.d("LocationApp", "LocationService: Location loop started");
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+    }
+
+    public boolean isLocationServiceRunning(Context context) {
+        Log.d("LocationApp", "LocationService: checking is service active");
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        if (manager != null) {
+            List<ActivityManager.RunningServiceInfo> runningServices = manager.getRunningServices(Integer.MAX_VALUE);
+            if (runningServices != null) {
+                for (ActivityManager.RunningServiceInfo service : runningServices) {
+                    if (LocationService.class.getName().equals(service.service.getClassName())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void displayLocation(double latitude, double longitude, long time) {
