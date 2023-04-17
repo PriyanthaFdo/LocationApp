@@ -1,6 +1,6 @@
-package com.example.locationapp;
+package CustomFusedLocation;
 
-import static com.example.locationapp.Constants.locationRequest;
+import static CustomFusedLocation.Constants.locationRequest;
 
 import android.Manifest;
 import android.app.Activity;

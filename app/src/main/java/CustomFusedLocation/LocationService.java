@@ -1,6 +1,6 @@
-package com.example.locationapp;
+package CustomFusedLocation;
 
-import static com.example.locationapp.Constants.*;
+import static CustomFusedLocation.Constants.*;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -21,6 +21,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import com.example.locationapp.R;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationResult;

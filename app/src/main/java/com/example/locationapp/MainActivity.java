@@ -1,6 +1,6 @@
 package com.example.locationapp;
 
-import static com.example.locationapp.Constants.*;
+import static CustomFusedLocation.Constants.*;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -9,6 +9,10 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+
+import CustomFusedLocation.CurrentLocation;
+import CustomFusedLocation.LocationService;
+import CustomFusedLocation.Permissions;
 
 
 /// Created by Priyantha Fernando. Last Updated 17-04-2023

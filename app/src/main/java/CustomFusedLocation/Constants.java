@@ -1,4 +1,4 @@
-package com.example.locationapp;
+package CustomFusedLocation;
 
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.Priority;
