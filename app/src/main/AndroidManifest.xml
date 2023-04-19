@@ -20,7 +20,7 @@
         tools:targetApi="31">
 
         <service
-            android:name="CustomFusedLocation.LocationService"
+            android:name="customFusedLocation.LocationService"
             android:enabled="true"
             android:exported="false" />
 

@@ -1,14 +1,14 @@
-package CustomFusedLocation;
+package customFusedLocation;
 
-import static CustomFusedLocation.Constants.*;
+import static customFusedLocation.Constants.*;
 
-import android.annotation.SuppressLint;
-import android.app.Activity;
+import android.Manifest;
 import android.app.ActivityManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
@@ -19,6 +19,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresPermission;
 import androidx.core.app.NotificationCompat;
 
 import com.example.locationapp.R;
@@ -35,6 +36,7 @@ import java.util.List;
 public class LocationService extends Service {
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
+
     private boolean placePipeCharacter;
 
     @Nullable
@@ -44,6 +46,7 @@ public class LocationService extends Service {
     }
 
     @Override
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
@@ -55,29 +58,28 @@ public class LocationService extends Service {
             public void onLocationResult(@NonNull LocationResult locationResult) {
                 super.onLocationResult(locationResult);
                 if(locationResult.getLocations().size() > 0){
-                    int index = locationResult.getLocations().size() - 1;
-                    double latitude = locationResult.getLocations().get(index).getLatitude();
-                    double longitude = locationResult.getLocations().get(index).getLongitude();
-                    long time =locationResult.getLocations().get(index).getTime();
-                    displayLocation(latitude, longitude, time);
+                    LocationListenerHolder.getLocationListener().onLocationReceived(locationResult.getLastLocation());
                 }
             }
         };
     }
 
-    public boolean start(Activity activity, Context context){
-        if(Permissions.checkPermissions(activity, context)) {
-            Log.d("LocationApp", "LocationService: start called");
-            Intent intent = new Intent(context, LocationService.class);
-            context.startService(intent);
-            return  true;
-        }else{
-            return false;
-        }
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    public boolean startLocationServiceLoop(Context context, LocationListener listener){
+        Log.d(LOGGER_TAG, "LocationService: start called");
+        Intent intent = new Intent(context, LocationService.class);
+        LocationListenerHolder.setLocationListener(listener);
+        placePipeCharacter = false;
+        ComponentName isStarted = context.startService(intent);
+        return isStarted != null;
     }
 
     public boolean stop(Context context){
-        Log.d("LocationApp", "LocationService: stop called");
+        Log.d(LOGGER_TAG, "LocationService: stop called");
+
+        placePipeCharacter = false;
+        writeToFile(context,"\n\n");
+
         Intent intent = new Intent(context, LocationService.class);
         return context.stopService(intent);
     }
@@ -104,12 +106,13 @@ public class LocationService extends Service {
     }
 
     @Override
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    // startGetLocationLoop() (Custom method) needs location permission
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("LocationApp", "LocationService: starting location service");
+        Log.d(LOGGER_TAG, "LocationService: starting location service");
         Notification notification = createNotification();
         startForeground(NOTIFICATION_ID, notification);
 
-        placePipeCharacter = false;
         startGetLocationLoop();
 
         return START_STICKY;
@@ -117,22 +120,21 @@ public class LocationService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.d("LocationApp", "LocationService: stopping location service");
+        Log.d(LOGGER_TAG, "LocationService: stopping location service");
         super.onDestroy();
         fusedLocationClient.removeLocationUpdates(locationCallback);
-        placePipeCharacter = false;
-        writeToFile("\n\n");
         stopForeground(true);
     }
 
-    @SuppressLint("MissingPermission")
+    @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    //FusedLocationProviderClient.requestLocationUpdates need location permission
     private void startGetLocationLoop() {
-        Log.d("LocationApp", "LocationService: Location loop started");
+        Log.d(LOGGER_TAG, "LocationService: Location loop started");
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
     }
 
     public boolean isLocationServiceRunning(Context context) {
-        Log.d("LocationApp", "LocationService: checking is service active");
+        Log.d(LOGGER_TAG, "LocationService: checking is service active");
         ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         if (manager != null) {
             List<ActivityManager.RunningServiceInfo> runningServices = manager.getRunningServices(Integer.MAX_VALUE);
@@ -147,27 +149,32 @@ public class LocationService extends Service {
         return false;
     }
 
-    private void displayLocation(double latitude, double longitude, long time) {
-        String result = latitude +","+ longitude +","+ time;
-        if(CREATE_TOAST_MSG) {
-            Toast.makeText(this, result, Toast.LENGTH_SHORT).show();
-        }
-        writeToFile(result);
-    }
-
-    private void writeToFile(String locationData){
-        File internalStorageDir = getFilesDir();
+    public void writeToFile(Context context, String string){
+        File internalStorageDir = context.getFilesDir();
         File file = new File(internalStorageDir, "coordinates.txt");
         try{
             FileWriter writer = new FileWriter(file, true);
             if(placePipeCharacter){
-                locationData = "|" + locationData;
+                string = "|" + string;
+            }else {
+                placePipeCharacter = true;
             }
-            writer.write(locationData);
-            placePipeCharacter = true;
+            writer.write(string);
             writer.close();
         }catch (IOException e){
             Toast.makeText(this, "Error: "+ e, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    static class LocationListenerHolder {
+        private static LocationListener locationListener;
+
+        public static synchronized void setLocationListener(LocationListener listener) {
+            locationListener = listener;
+        }
+
+        public static synchronized LocationListener getLocationListener() {
+            return locationListener;
         }
     }
 }

@@ -1,6 +1,7 @@
-package CustomFusedLocation;
+package customFusedLocation;
 
-import static CustomFusedLocation.Constants.locationRequest;
+import static customFusedLocation.Constants.LOGGER_TAG;
+import static customFusedLocation.Constants.locationRequest;
 
 import android.Manifest;
 import android.app.Activity;
@@ -27,10 +28,11 @@ import com.google.android.gms.tasks.Task;
 public class Permissions {
   private static LocationManager locationManager;
 
+
   public static boolean checkPermissions(Activity activity, Context context) {
     boolean isAllPermissionsGranted = false;
 
-    Log.d("LocationApp", "Permissions: checking permissions");
+    Log.d(LOGGER_TAG, "Permissions: checking permissions");
 
     if (isLocationAllowed(context)) {
       if (isGpsEnabled(context)) {
@@ -56,12 +58,12 @@ public class Permissions {
   private static boolean isGpsEnabled(Context context) {
     if(locationManager == null)
       locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-    Log.d("LocationApp", "Permissions: is GPS enabled");
+    Log.d(LOGGER_TAG, "Permissions: is GPS enabled");
     return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
   }
 
   private static void turnOnGps(Activity activity, Context context) {
-    Log.d("LocationApp", "Permissions: Request GPS turn on");
+    Log.d(LOGGER_TAG, "Permissions: Request GPS turn on");
     LocationSettingsRequest.Builder builder =
           new LocationSettingsRequest.Builder().addLocationRequest(locationRequest);
     builder.setAlwaysShow(true);
@@ -94,24 +96,24 @@ public class Permissions {
   }
 
   private static boolean isLocationAllowed(Context context) {
-    Log.d("LocationApp", "Permissions: is location permission allowed");
+    Log.d(LOGGER_TAG, "Permissions: is location permission allowed");
     return ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
   }
 
   private static void requestLocationPermission(Activity activity) {
-    Log.d("LocationApp", "Permissions: request location permission");
+    Log.d(LOGGER_TAG, "Permissions: request location permission");
     ActivityCompat.requestPermissions(activity, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 44);
   }
 
   @RequiresApi(api = Build.VERSION_CODES.Q)
   private static boolean isBackgroundLocationAllowed(Context context){
-    Log.d("LocationApp", "Permissions: is background location permission allowed");
+    Log.d(LOGGER_TAG, "Permissions: is background location permission allowed");
     return ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED;
   }
 
   @RequiresApi(api = Build.VERSION_CODES.Q)
   private static void requestBackgroundLocationPermission(Activity activity) {
-    Log.d("LocationApp", "Permissions: requesting background location permission");
+    Log.d(LOGGER_TAG, "Permissions: requesting background location permission");
     ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, 55);
   }
 
