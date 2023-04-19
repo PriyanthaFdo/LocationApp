@@ -23,72 +23,14 @@ import customFusedLocation.LocationService;
 import customFusedLocation.Permissions;
 
 
-/// Created by Priyantha Fernando. Last Updated 18-04-2023
+/// Created by Priyantha Fernando. Last Updated 19-04-2023
 
 public class MainActivity extends AppCompatActivity {
   private CurrentLocation currentLocation;
   private LocationService locationService;
   private FusedLocationProviderClient fusedLocationClient;
-  @SuppressLint("MissingPermission") // Permissions.CheckPermissions() provides all needed permissions
-  private final View.OnClickListener currentLocationBtnOnClick = v -> {
-    Log.d(LOGGER_TAG, "MainActivity: Single Location Btn Clicked");
-    if (Permissions.checkPermissions(this, this)) {
-      currentLocation.getCurrentLocation(fusedLocationClient, location -> {
-        if (location != null) {
-          double latitude = location.getLatitude();
-          double longitude = location.getLongitude();
-          long time = location.getTime();
 
-          Toast.makeText(this, latitude + "," + longitude + "," + time, Toast.LENGTH_LONG).show();
-        } else {
-          Toast.makeText(this, "Could not get Location", Toast.LENGTH_SHORT).show();
-        }
-      });
-    }
-  };
   private Button btn_startStop;
-  private final View.OnClickListener startStopBtnOnClick = v -> {
-    Log.d(LOGGER_TAG, "MainActivity: Location Service Btn Clicked");
-
-    if (!locationService.isLocationServiceRunning(this)) {
-      if (startLocationService()) {
-        Log.d(LOGGER_TAG, "MainActivity: started location service");
-        btn_startStop.setText(R.string.stop_location_service);
-      } else {
-        Log.d(LOGGER_TAG, "MainActivity: could not start service");
-      }
-    } else {
-      if (locationService.stop(this)) {
-        Log.d(LOGGER_TAG, "MainActivity: stopped location service");
-        btn_startStop.setText(R.string.start_location_service);
-      } else {
-        Log.d(LOGGER_TAG, "MainActivity: could not stop service");
-      }
-    }
-  };
-
-  @SuppressLint("MissingPermission")
-  private boolean startLocationService(){
-    boolean startSuccess = false;
-    if(Permissions.checkPermissions(this, this)) {
-      startSuccess = locationService.startLocationServiceLoop(this, location -> {
-        if(location != null) {
-          double latitude = location.getLatitude();
-          double longitude = location.getLongitude();
-          long time = location.getTime();
-
-          String result = latitude +","+ longitude +","+ time;
-          if(CREATE_TOAST_MSG) {
-            Toast.makeText(this, result, Toast.LENGTH_SHORT).show();
-          }
-          locationService.writeToFile(this, result);
-        }else{
-          Toast.makeText(this, "Service returned null location", Toast.LENGTH_SHORT).show();
-        }
-      });
-    }
-    return startSuccess;
-  }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -118,11 +60,75 @@ public class MainActivity extends AppCompatActivity {
     btn_currentLocation.setOnClickListener(currentLocationBtnOnClick);
   }
 
+  @SuppressLint("MissingPermission")
+  // Permissions.CheckPermissions() provides all needed permissions
+  private final View.OnClickListener currentLocationBtnOnClick = v -> {
+    Log.d(LOGGER_TAG, "MainActivity: Single Location Btn Clicked");
+
+    if (Permissions.checkPermissions(this, this)) {
+      currentLocation.getCurrentLocation(fusedLocationClient, location -> {
+        if (location != null) {
+          double latitude = location.getLatitude();
+          double longitude = location.getLongitude();
+          long time = location.getTime();
+
+          Toast.makeText(this, latitude + "," + longitude + "," + time, Toast.LENGTH_LONG).show();
+        } else {
+          Toast.makeText(this, "Could not get Location", Toast.LENGTH_SHORT).show();
+        }
+      });
+    }
+  };
+
+  private final View.OnClickListener startStopBtnOnClick = v -> {
+    Log.d(LOGGER_TAG, "MainActivity: Location Service Btn Clicked");
+
+    if (!locationService.isLocationServiceRunning(this)) {
+      if (startLocationService()) {
+        Log.d(LOGGER_TAG, "MainActivity: started location service");
+        btn_startStop.setText(R.string.stop_location_service);
+      } else {
+        Log.d(LOGGER_TAG, "MainActivity: could not start service");
+      }
+    } else {
+      if (locationService.stop(this)) {
+        Log.d(LOGGER_TAG, "MainActivity: stopped location service");
+        btn_startStop.setText(R.string.start_location_service);
+      } else {
+        Log.d(LOGGER_TAG, "MainActivity: could not stop service");
+      }
+    }
+  };
+
+  @SuppressLint("MissingPermission")
+  private boolean startLocationService() {
+    boolean startSuccess = false;
+    if (Permissions.checkPermissions(this, this)) {
+      startSuccess = locationService.startLocationServiceLoop(this, location -> {
+        if (location != null) {
+          double latitude = location.getLatitude();
+          double longitude = location.getLongitude();
+          long time = location.getTime();
+
+          String result = latitude + "," + longitude + "," + time;
+          if (CREATE_TOAST_MSG) {
+            Toast.makeText(this, result, Toast.LENGTH_SHORT).show();
+          }
+          locationService.writeToFile(this, result);
+        } else {
+          Toast.makeText(this, "Service returned null location", Toast.LENGTH_SHORT).show();
+        }
+      });
+    }
+    return startSuccess;
+  }
+
   @Override
   public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     Log.d(LOGGER_TAG, "Permissions: permission request result received");
     Permissions.checkPermissions(this, this);
   }
+
 }
 

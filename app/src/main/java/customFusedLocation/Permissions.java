@@ -36,10 +36,10 @@ public class Permissions {
 
     if (isLocationAllowed(context)) {
       if (isGpsEnabled(context)) {
-        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
           isAllPermissionsGranted = true;
         } else {
-          if(isBackgroundLocationAllowed(context)) {
+          if (isBackgroundLocationAllowed(context)) {
             isAllPermissionsGranted = true;
           } else {
             requestBackgroundLocationPermission(activity);
@@ -52,11 +52,11 @@ public class Permissions {
       requestLocationPermission(activity);
     }
 
-    return  isAllPermissionsGranted;
+    return isAllPermissionsGranted;
   }
 
   private static boolean isGpsEnabled(Context context) {
-    if(locationManager == null)
+    if (locationManager == null)
       locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
     Log.d(LOGGER_TAG, "Permissions: is GPS enabled");
     return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
@@ -64,13 +64,10 @@ public class Permissions {
 
   private static void turnOnGps(Activity activity, Context context) {
     Log.d(LOGGER_TAG, "Permissions: Request GPS turn on");
-    LocationSettingsRequest.Builder builder =
-          new LocationSettingsRequest.Builder().addLocationRequest(locationRequest);
+    LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder().addLocationRequest(locationRequest);
     builder.setAlwaysShow(true);
 
-    Task<LocationSettingsResponse> result =
-          LocationServices.getSettingsClient(context.getApplicationContext())
-                .checkLocationSettings(builder.build());
+    Task<LocationSettingsResponse> result = LocationServices.getSettingsClient(context.getApplicationContext()).checkLocationSettings(builder.build());
 
     result.addOnCompleteListener(task -> {
       try {
@@ -106,7 +103,7 @@ public class Permissions {
   }
 
   @RequiresApi(api = Build.VERSION_CODES.Q)
-  private static boolean isBackgroundLocationAllowed(Context context){
+  private static boolean isBackgroundLocationAllowed(Context context) {
     Log.d(LOGGER_TAG, "Permissions: is background location permission allowed");
     return ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED;
   }
